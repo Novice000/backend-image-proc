@@ -2,19 +2,24 @@ from django.http import FileResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
-from PIL import Image
+from rest_framework.throttling import UserRateThrottle, AnonRateThrottle
+from PIL import Image, UnidentifiedImageError
 from io import BytesIO
 from rembg import remove
 
 class ImageCompress(APIView):
+    throttle_classes = (UserRateThrottle, AnonRateThrottle)
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
         if "image" not in request.FILES:
             return Response({"error": "No image provided"}, status=400)
 
-        image = request.FILES["image"]
-        img = Image.open(image)
+        try:
+            image = request.FILES["image"]
+            img = Image.open(image)
+        except UnidentifiedImageError:
+            return Response({"error": "Invalid image file"}, status=400)
 
         width = request.data.get("width")
         height = request.data.get("height")
@@ -42,14 +47,19 @@ class ImageCompress(APIView):
 
 
 class ImageRemoveBg(APIView):
+    throttle_classes = (UserRateThrottle, AnonRateThrottle)
     parser_classes = (MultiPartParser, FormParser)
 
     def post(self, request):
         if "image" not in request.FILES:
             return Response({"error": "No image provided"}, status=400)
 
-        image = Image.open(request.FILES["image"])
-        output = remove(image)
+        
+        try:
+            image = Image.open(request.FILES["image"])
+            output = remove(image)
+        except UnidentifiedImageError:
+            return Response({"error": "Invalid image file"}, status=400)
 
         # Ensure output has transparency
         if output.mode != "RGBA":
@@ -61,4 +71,35 @@ class ImageRemoveBg(APIView):
 
         response = FileResponse(img_io, content_type="image/png")
         response["Content-Disposition"] = f'attachment; filename="{request.FILES["image"].name}"'
+        return response
+
+
+class ImageConvert(APIView):
+    throttle_classes = (UserRateThrottle, AnonRateThrottle)
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request):
+        if "image" not in request.FILES:
+            return Response({"error": "No image provided"}, status=400)
+
+        try:
+            image = request.FILES["image"]
+            img = Image.open(image)
+        except UnidentifiedImageError:
+            return Response({"error": "Invalid image file"}, status=400)
+
+        image_format = request.data.get("format", "JPEG").lower()
+        
+        if image_format not in ["jpeg", "png", "webp", "tiff", "pdf"]:
+            return Response({"error": "Invalid image format"}, status=400)
+
+        img_io = BytesIO()
+        try:
+            img.save(img_io, format=image_format, optimize=True)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+        img_io.seek(0)
+
+        response = FileResponse(img_io, content_type=f"image/{image_format}")
+        response["Content-Disposition"] = f'attachment; filename="{image.name}"'
         return response
