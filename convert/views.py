@@ -46,9 +46,13 @@ class ImageProc(APIView):
         if file_format not in ["jpeg", "png", "webp", "tiff", "pdf"]:
             return Response({"error": "Invalid file_format value"}, status=400)
 
+        # Convert RGBA to RGB if saving as JPEG
+        if file_format == "jpeg" and img.mode == "RGBA":
+            img = img.convert("RGB")
+
         # Save optimized image to memory
         img_io = BytesIO()
-        save_kwargs = {"format": file_format}
+        save_kwargs = {"format": file_format.upper()}
         if file_format in ["jpeg", "png", "webp"]:
             save_kwargs["quality"] = quality
             save_kwargs["optimize"] = True
