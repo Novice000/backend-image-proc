@@ -33,7 +33,7 @@ if env("ENVIRONMENT") == "development":
 else:
     DEBUG = False
 
-ALLOWED_HOSTS = ["backend-image-proc.onrender.com", "127.0.0.1", "localhost"]
+ALLOWED_HOSTS = ["backend-image-proc.onrender.com", "127.0.0.1", "localhost", ['*']]
 # CSRF_TRUSTED_ORIGINS = ["https://backend-image-proc.onrender.com"]
 
 
