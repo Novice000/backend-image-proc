@@ -67,3 +67,15 @@ class ImageProc(APIView):
         response = FileResponse(img_io, content_type=content_type)
         response["Content-Disposition"] = f'attachment; filename="{image.name.split(".")[0]}.{file_extension}"'
         return response
+
+    def get(self, request):
+        return Response({"error": "Invalid request method"}, status=400)
+    
+    def put(self, request):
+        return Response({"error": "Invalid request method"}, status=400)
+    
+
+
+def index(request):
+    return Response({"error": "Invalid request method",
+                     "message": "Use POST method to upload image to the '/process-image/' endpoint" }, status=400)
